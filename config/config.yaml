@@ -1,0 +1,6 @@
+OPCDA:
+ ProgId: opcserversim.Instance.1
+ Nodes: ["localhost"]
+ Tags: ["DateTimeValue", "TimeValue"]
+Kafka:
+ Brokers: ["192.168.1.9:29092"]
