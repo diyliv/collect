@@ -30,12 +30,6 @@ func NewCollect(client opc.Connection, logger *zap.Logger, cfg *config.Config, w
 	}
 }
 
-func read(job <-chan string) {
-	for j := range job {
-		fmt.Println(j)
-	}
-}
-
 func (c *collect) ReadFromDA(ctx context.Context) {
 	c.wg.Add(len(c.client.Tags()))
 	for _, tag := range c.client.Tags() {
