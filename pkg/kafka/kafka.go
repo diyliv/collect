@@ -1,17 +1,18 @@
 package kafka
 
 import (
-	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"context"
+
+	"github.com/segmentio/kafka-go"
 
 	"github.com/diyliv/collect/config"
 )
 
-func NewKafkaProducer(cfg *config.Config) (*kafka.Producer, error) {
-	producer, err := kafka.NewProducer(&kafka.ConfigMap{
-		"bootstrap.servers": cfg.Kafka.Brokers[0],
-	})
-	if err != nil {
-		return nil, err
-	}
-	return producer, err
+func NewKafkaConn(cfg *config.Config) (*kafka.Conn, error) {
+	return kafka.DialLeader(
+		context.Background(),
+		"tcp",
+		cfg.Kafka.Brokers[0],
+		cfg.Kafka.Topic,
+		cfg.Kafka.Partition)
 }

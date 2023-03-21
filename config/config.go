@@ -14,7 +14,9 @@ type OPCDA struct {
 }
 
 type Kafka struct {
-	Brokers []string `yaml:"Brokers"`
+	Brokers   []string `yaml:"Brokers"`
+	Topic     string   `yaml:"Topic"`
+	Partition int      `yaml:"Partition"`
 }
 
 func ReadConfig(cfgName, cfgType, cfgPath string) *Config {

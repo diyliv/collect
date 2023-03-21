@@ -1,40 +1,52 @@
 package collect
 
 import (
+	"context"
 	"fmt"
+	"sync"
 
+	"github.com/konimarti/opc"
 	"go.uber.org/zap"
 
 	"github.com/diyliv/collect/config"
 	"github.com/diyliv/collect/internal/interfaces"
-	"github.com/diyliv/collect/pkg/opcda"
 )
 
 type collect struct {
-	cfg    *config.Config
+	client opc.Connection
 	logger *zap.Logger
+	wg     sync.WaitGroup
+	cfg    *config.Config
 	write  interfaces.Producer
 }
 
-func NewCollect(cfg *config.Config, logger *zap.Logger, write interfaces.Producer) *collect {
+func NewCollect(client opc.Connection, logger *zap.Logger, cfg *config.Config, write interfaces.Producer) *collect {
 	return &collect{
-		cfg:    cfg,
+		client: client,
 		logger: logger,
+		wg:     sync.WaitGroup{},
+		cfg:    cfg,
 		write:  write,
 	}
 }
 
-func (c *collect) ReadFromDA() {
-	client, err := opcda.ConnectOPCDA(c.cfg.OPCDA.ProgId, c.cfg.OPCDA.Nodes, c.cfg.OPCDA.Tags)
-	if err != nil {
-		c.logger.Error(fmt.Sprintf("Error while connecting to: ProgId[%s] Node %s %v\n",
-			c.cfg.OPCDA.ProgId, c.cfg.OPCDA.Nodes, err))
+func read(job <-chan string) {
+	for j := range job {
+		fmt.Println(j)
 	}
-	defer client.Close()
+}
 
-	for _, tag := range client.Tags() {
-		if err := c.write.Produce([]string{tag}); err != nil {
-			c.logger.Error("Error while producing message: " + err.Error())
-		}
+func (c *collect) ReadFromDA(ctx context.Context) {
+	c.wg.Add(len(c.client.Tags()))
+	for _, tag := range c.client.Tags() {
+		go func(tag string) {
+			defer c.wg.Done()
+			item := c.client.ReadItem(tag)
+			fmt.Println(tag, item.Value)
+			if err := c.write.Produce(ctx, item.Value); err != nil {
+				c.logger.Error("Error while producing message: " + err.Error())
+			}
+		}(tag)
 	}
+	c.wg.Wait()
 }

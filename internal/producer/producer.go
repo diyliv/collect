@@ -1,45 +1,88 @@
 package producer
 
 import (
+	"context"
 	"fmt"
+	"strconv"
+	"time"
 
-	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
+	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/compress"
 	"go.uber.org/zap"
+
+	"github.com/diyliv/collect/config"
+	"github.com/diyliv/collect/pkg/utils"
 )
 
 type producer struct {
 	logger   *zap.Logger
-	producer *kafka.Producer
+	producer *kafka.Writer
+	cfg      *config.Config
 }
 
-func NewProducer(logger *zap.Logger, kafkaProducer *kafka.Producer) *producer {
-	return &producer{logger: logger, producer: kafkaProducer}
+func NewProducer(logger *zap.Logger, cfg *config.Config, topic string) *producer {
+	return &producer{logger: logger, producer: &kafka.Writer{
+		Addr:         kafka.TCP(cfg.Kafka.Brokers...),
+		Topic:        topic,
+		Balancer:     &kafka.LeastBytes{},
+		RequiredAcks: writerRequiredAcks,
+		MaxAttempts:  writerMaxAttempts,
+		Logger:       kafka.LoggerFunc(logger.Sugar().Debugf),
+		ErrorLogger:  kafka.LoggerFunc(logger.Sugar().Errorf),
+		Compression:  compress.Snappy,
+		ReadTimeout:  writerReadTimeout,
+		WriteTimeout: writerWriteTimeout,
+	}, cfg: cfg}
 }
 
-func (p *producer) Produce(messages []string) error {
-	go func() {
-		for e := range p.producer.Events() {
-			switch ev := e.(type) {
-			case *kafka.Message:
-				if ev.TopicPartition.Error != nil {
-					p.logger.Error(fmt.Sprintf("Delivery failed: %v\n", ev.TopicPartition))
-				} else {
-					p.logger.Info(fmt.Sprintf("Delivered message to: %v\n", ev.TopicPartition))
-				}
-			}
-		}
-	}()
+func (p *producer) GetKafkaWriter(topic string) *kafka.Writer {
+	return &kafka.Writer{
+		Addr:         kafka.TCP(p.cfg.Kafka.Brokers...),
+		Topic:        topic,
+		Balancer:     &kafka.LeastBytes{},
+		RequiredAcks: writerRequiredAcks,
+		MaxAttempts:  writerMaxAttempts,
+		Logger:       kafka.LoggerFunc(p.logger.Sugar().Debugf),
+		ErrorLogger:  kafka.LoggerFunc(p.logger.Sugar().Errorf),
+		Compression:  compress.Snappy,
+		ReadTimeout:  writerReadTimeout,
+		WriteTimeout: writerWriteTimeout,
+	}
+}
 
-	topic := "topic"
-	for _, msg := range messages {
-		if err := p.producer.Produce(&kafka.Message{
-			TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
-			Value:          []byte(msg),
-		}, nil); err != nil {
-			p.logger.Error("Error while producing message: " + err.Error())
+func (p *producer) Produce(ctx context.Context, message interface{}) error {
+	switch t := message.(type) {
+	case string:
+		err := p.producer.WriteMessages(ctx, kafka.Message{Value: []byte(t)})
+		if err != nil {
+			p.logger.Error("Error while writing messages: " + err.Error())
 			return err
 		}
+	case time.Time:
+		binTime, err := t.MarshalBinary()
+		if err != nil {
+			p.logger.Error("Error while converting time to binary: " + err.Error())
+			return err
+		}
+		err = p.producer.WriteMessages(ctx, kafka.Message{Value: binTime})
+		if err != nil {
+			p.logger.Error("Error while writing messages: " + err.Error())
+			return err
+		}
+	case int32:
+		err := p.producer.WriteMessages(ctx, kafka.Message{Value: []byte(strconv.Itoa(int(t)))})
+		if err != nil {
+			p.logger.Error("Error while writing messages: " + err.Error())
+			return err
+		}
+	case float64:
+		err := p.producer.WriteMessages(ctx, kafka.Message{Value: utils.Float64ToBytes(t)})
+		if err != nil {
+			p.logger.Error("Error while writing messages: " + err.Error())
+			return err
+		}
+	default:
+		p.logger.Info(fmt.Sprintf("Undefined type: %T\n", t))
 	}
-	p.producer.Flush(15 * 1000)
 	return nil
 }
