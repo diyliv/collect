@@ -26,7 +26,7 @@ func main() {
 		log.Printf("Error while creating new kafka conn: %v\n", err)
 		return
 	}
-	kafkaProducer := producer.NewProducer(logger, cfg, "topic")
+	kafkaProducer := producer.NewProducer(logger, cfg, cfg.Kafka.Topic)
 	defer func() {
 		client.Close()
 		kafka.Close()

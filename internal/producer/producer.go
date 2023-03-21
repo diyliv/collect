@@ -2,8 +2,9 @@ package producer
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"strconv"
+	"reflect"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -11,7 +12,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/diyliv/collect/config"
-	"github.com/diyliv/collect/pkg/utils"
+	"github.com/diyliv/collect/internal/models"
 )
 
 type producer struct {
@@ -21,62 +22,105 @@ type producer struct {
 }
 
 func NewProducer(logger *zap.Logger, cfg *config.Config, topic string) *producer {
-	return &producer{logger: logger, producer: &kafka.Writer{
-		Addr:         kafka.TCP(cfg.Kafka.Brokers...),
-		Topic:        topic,
-		Balancer:     &kafka.LeastBytes{},
-		RequiredAcks: writerRequiredAcks,
-		MaxAttempts:  writerMaxAttempts,
-		Logger:       kafka.LoggerFunc(logger.Sugar().Debugf),
-		ErrorLogger:  kafka.LoggerFunc(logger.Sugar().Errorf),
-		Compression:  compress.Snappy,
-		ReadTimeout:  writerReadTimeout,
-		WriteTimeout: writerWriteTimeout,
-	}, cfg: cfg}
+	return &producer{logger: logger,
+		producer: &kafka.Writer{
+			Addr:         kafka.TCP(cfg.Kafka.Brokers...),
+			Topic:        topic,
+			Balancer:     &kafka.LeastBytes{},
+			RequiredAcks: writerRequiredAcks,
+			MaxAttempts:  writerMaxAttempts,
+			Logger:       kafka.LoggerFunc(logger.Sugar().Debugf),
+			ErrorLogger:  kafka.LoggerFunc(logger.Sugar().Errorf),
+			Compression:  compress.Snappy,
+			ReadTimeout:  writerReadTimeout,
+			WriteTimeout: writerWriteTimeout,
+		},
+		cfg: cfg}
 }
 
-func (p *producer) GetKafkaWriter(topic string) *kafka.Writer {
-	return &kafka.Writer{
-		Addr:         kafka.TCP(p.cfg.Kafka.Brokers...),
-		Topic:        topic,
-		Balancer:     &kafka.LeastBytes{},
-		RequiredAcks: writerRequiredAcks,
-		MaxAttempts:  writerMaxAttempts,
-		Logger:       kafka.LoggerFunc(p.logger.Sugar().Debugf),
-		ErrorLogger:  kafka.LoggerFunc(p.logger.Sugar().Errorf),
-		Compression:  compress.Snappy,
-		ReadTimeout:  writerReadTimeout,
-		WriteTimeout: writerWriteTimeout,
-	}
-}
-
-func (p *producer) Produce(ctx context.Context, message interface{}) error {
+func (p *producer) Produce(ctx context.Context, tagName string, itemQuality int16, readAt time.Time, message interface{}) error {
 	switch t := message.(type) {
 	case string:
-		err := p.producer.WriteMessages(ctx, kafka.Message{Value: []byte(t)})
+		var opc models.OPCDA
+		opc.TagName = tagName
+		opc.TagType = reflect.TypeOf(t).String()
+		opc.TagValue = t
+		opc.TagQuality = itemQuality
+		opc.ReadAt = readAt
+		opcByte, err := json.Marshal(&opc)
+		if err != nil {
+			p.logger.Error("Error while marshalling: " + err.Error())
+		}
+
+		err = p.producer.WriteMessages(ctx, kafka.Message{Value: opcByte})
 		if err != nil {
 			p.logger.Error("Error while writing messages: " + err.Error())
 			return err
 		}
 	case time.Time:
-		binTime, err := t.MarshalBinary()
+		var opc models.OPCDA
+		opc.TagName = tagName
+		opc.TagType = reflect.TypeOf(t).String()
+		opc.TagValue = t
+		opc.TagQuality = itemQuality
+		opc.ReadAt = readAt
+		opcByte, err := json.Marshal(&opc)
 		if err != nil {
-			p.logger.Error("Error while converting time to binary: " + err.Error())
-			return err
+			p.logger.Error("Error while marshalling: " + err.Error())
 		}
-		err = p.producer.WriteMessages(ctx, kafka.Message{Value: binTime})
+
+		err = p.producer.WriteMessages(ctx, kafka.Message{Value: opcByte})
 		if err != nil {
 			p.logger.Error("Error while writing messages: " + err.Error())
 			return err
 		}
 	case int32:
-		err := p.producer.WriteMessages(ctx, kafka.Message{Value: []byte(strconv.Itoa(int(t)))})
+		var opc models.OPCDA
+		opc.TagName = tagName
+		opc.TagType = reflect.TypeOf(t).String()
+		opc.TagValue = t
+		opc.TagQuality = itemQuality
+		opc.ReadAt = readAt
+		opcByte, err := json.Marshal(&opc)
+		if err != nil {
+			p.logger.Error("Error while marshalling: " + err.Error())
+		}
+
+		err = p.producer.WriteMessages(ctx, kafka.Message{Value: opcByte})
 		if err != nil {
 			p.logger.Error("Error while writing messages: " + err.Error())
 			return err
 		}
 	case float64:
-		err := p.producer.WriteMessages(ctx, kafka.Message{Value: utils.Float64ToBytes(t)})
+		var opc models.OPCDA
+		opc.TagName = tagName
+		opc.TagType = reflect.TypeOf(t).String()
+		opc.TagValue = t
+		opc.TagQuality = itemQuality
+		opc.ReadAt = readAt
+		opcByte, err := json.Marshal(&opc)
+		if err != nil {
+			p.logger.Error("Error while marshalling: " + err.Error())
+		}
+
+		err = p.producer.WriteMessages(ctx, kafka.Message{Value: opcByte})
+		if err != nil {
+			p.logger.Error("Error while writing messages: " + err.Error())
+			return err
+		}
+	case float32:
+		var opc models.OPCDA
+		opc.TagName = tagName
+		opc.TagType = reflect.TypeOf(t).String()
+		opc.TagValue = t
+		opc.TagQuality = itemQuality
+		opc.ReadAt = readAt
+		opcByte, err := json.Marshal(&opc)
+		if err != nil {
+			p.logger.Error("Error while marshalling: " + err.Error())
+		}
+
+		err = p.producer.WriteMessages(ctx, kafka.Message{Value: opcByte})
 		if err != nil {
 			p.logger.Error("Error while writing messages: " + err.Error())
 			return err

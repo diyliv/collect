@@ -37,7 +37,7 @@ func (c *collect) ReadFromDA(ctx context.Context) {
 			defer c.wg.Done()
 			item := c.client.ReadItem(tag)
 			fmt.Println(tag, item.Value)
-			if err := c.write.Produce(ctx, item.Value); err != nil {
+			if err := c.write.Produce(ctx, tag, item.Quality, item.Timestamp, item.Value); err != nil {
 				c.logger.Error("Error while producing message: " + err.Error())
 			}
 		}(tag)

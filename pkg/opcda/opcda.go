@@ -1,6 +1,8 @@
 package opcda
 
-import "github.com/konimarti/opc"
+import (
+	"github.com/konimarti/opc"
+)
 
 func ConnectOPCDA(progId string, node, tags []string) (opc.Connection, error) {
 	opc.Debug()

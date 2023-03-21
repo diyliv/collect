@@ -1,8 +1,8 @@
 OPCDA:
  ProgId: opcserversim.Instance.1
  Nodes: ["localhost"]
- Tags: ["StringValue", "DateTimeValue", "DateValue", "TimeValue", "DoubleValue", "WordValue"]
+ Tags: ["StringValue", "DateTimeValue", "DateValue", "TimeValue", "WordValue"]
 Kafka:
  Brokers: ["192.168.1.9:29092"]
- Topic: topic
+ Topic: helll
  Partition: 0

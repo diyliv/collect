@@ -1,7 +1,10 @@
 package interfaces
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type Producer interface {
-	Produce(ctx context.Context, message interface{}) error
+	Produce(ctx context.Context, tagName string, itemQuality int16, readAt time.Time, message interface{}) error
 }
