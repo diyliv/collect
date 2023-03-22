@@ -38,88 +38,93 @@ func NewProducer(logger *zap.Logger, cfg *config.Config, topic string) *producer
 		cfg: cfg}
 }
 
-func (p *producer) Produce(ctx context.Context, tagName string, itemQuality int16, readAt time.Time, message interface{}) error {
+func (p *producer) Produce(ctx context.Context, serverName, tagName string, itemQuality int16, readAt time.Time, message interface{}) error {
 	switch t := message.(type) {
 	case string:
-		var opc models.OPCDA
-		opc.TagName = tagName
-		opc.TagType = reflect.TypeOf(t).String()
-		opc.TagValue = t
-		opc.TagQuality = itemQuality
-		opc.ReadAt = readAt
-		opcByte, err := json.Marshal(&opc)
+		opcByte, err := marshal(models.OPCDA{
+			ServerName: serverName,
+			TagName:    tagName,
+			TagType:    reflect.TypeOf(t).String(),
+			TagValue:   t,
+			TagQuality: itemQuality,
+			ReadAt:     readAt,
+		})
 		if err != nil {
 			p.logger.Error("Error while marshalling: " + err.Error())
+			return err
 		}
-
 		err = p.producer.WriteMessages(ctx, kafka.Message{Value: opcByte})
 		if err != nil {
 			p.logger.Error("Error while writing messages: " + err.Error())
 			return err
 		}
 	case time.Time:
-		var opc models.OPCDA
-		opc.TagName = tagName
-		opc.TagType = reflect.TypeOf(t).String()
-		opc.TagValue = t
-		opc.TagQuality = itemQuality
-		opc.ReadAt = readAt
-		opcByte, err := json.Marshal(&opc)
+		opcByte, err := marshal(models.OPCDA{
+			ServerName: serverName,
+			TagName:    tagName,
+			TagType:    reflect.TypeOf(t).String(),
+			TagValue:   t,
+			TagQuality: itemQuality,
+			ReadAt:     readAt,
+		})
 		if err != nil {
 			p.logger.Error("Error while marshalling: " + err.Error())
+			return err
 		}
-
 		err = p.producer.WriteMessages(ctx, kafka.Message{Value: opcByte})
 		if err != nil {
 			p.logger.Error("Error while writing messages: " + err.Error())
 			return err
 		}
 	case int32:
-		var opc models.OPCDA
-		opc.TagName = tagName
-		opc.TagType = reflect.TypeOf(t).String()
-		opc.TagValue = t
-		opc.TagQuality = itemQuality
-		opc.ReadAt = readAt
-		opcByte, err := json.Marshal(&opc)
+		opcByte, err := marshal(models.OPCDA{
+			ServerName: serverName,
+			TagName:    tagName,
+			TagType:    reflect.TypeOf(t).String(),
+			TagValue:   t,
+			TagQuality: itemQuality,
+			ReadAt:     readAt,
+		})
 		if err != nil {
 			p.logger.Error("Error while marshalling: " + err.Error())
+			return err
 		}
-
 		err = p.producer.WriteMessages(ctx, kafka.Message{Value: opcByte})
 		if err != nil {
 			p.logger.Error("Error while writing messages: " + err.Error())
 			return err
 		}
 	case float64:
-		var opc models.OPCDA
-		opc.TagName = tagName
-		opc.TagType = reflect.TypeOf(t).String()
-		opc.TagValue = t
-		opc.TagQuality = itemQuality
-		opc.ReadAt = readAt
-		opcByte, err := json.Marshal(&opc)
+		opcByte, err := marshal(models.OPCDA{
+			ServerName: serverName,
+			TagName:    tagName,
+			TagType:    reflect.TypeOf(t).String(),
+			TagValue:   t,
+			TagQuality: itemQuality,
+			ReadAt:     readAt,
+		})
 		if err != nil {
 			p.logger.Error("Error while marshalling: " + err.Error())
+			return err
 		}
-
 		err = p.producer.WriteMessages(ctx, kafka.Message{Value: opcByte})
 		if err != nil {
 			p.logger.Error("Error while writing messages: " + err.Error())
 			return err
 		}
 	case float32:
-		var opc models.OPCDA
-		opc.TagName = tagName
-		opc.TagType = reflect.TypeOf(t).String()
-		opc.TagValue = t
-		opc.TagQuality = itemQuality
-		opc.ReadAt = readAt
-		opcByte, err := json.Marshal(&opc)
+		opcByte, err := marshal(models.OPCDA{
+			ServerName: serverName,
+			TagName:    tagName,
+			TagType:    reflect.TypeOf(t).String(),
+			TagValue:   t,
+			TagQuality: itemQuality,
+			ReadAt:     readAt,
+		})
 		if err != nil {
 			p.logger.Error("Error while marshalling: " + err.Error())
+			return err
 		}
-
 		err = p.producer.WriteMessages(ctx, kafka.Message{Value: opcByte})
 		if err != nil {
 			p.logger.Error("Error while writing messages: " + err.Error())
@@ -129,4 +134,12 @@ func (p *producer) Produce(ctx context.Context, tagName string, itemQuality int1
 		p.logger.Info(fmt.Sprintf("Undefined type: %T\n", t))
 	}
 	return nil
+}
+
+func marshal(data interface{}) ([]byte, error) {
+	dataByte, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+	return dataByte, err
 }

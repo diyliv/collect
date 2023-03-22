@@ -5,6 +5,7 @@ import (
 )
 
 type OPCDA struct {
+	ServerName string      `json:"server_name"`
 	TagName    string      `json:"tag_name"`
 	TagType    string      `json:"tag_type"`
 	TagValue   interface{} `json:"tag_value"`

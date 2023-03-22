@@ -2,7 +2,6 @@ package collect
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/konimarti/opc"
@@ -36,8 +35,7 @@ func (c *collect) ReadFromDA(ctx context.Context) {
 		go func(tag string) {
 			defer c.wg.Done()
 			item := c.client.ReadItem(tag)
-			fmt.Println(tag, item.Value)
-			if err := c.write.Produce(ctx, tag, item.Quality, item.Timestamp, item.Value); err != nil {
+			if err := c.write.Produce(ctx, c.cfg.OPCDA.ProgId, tag, item.Quality, item.Timestamp, item.Value); err != nil {
 				c.logger.Error("Error while producing message: " + err.Error())
 			}
 		}(tag)
